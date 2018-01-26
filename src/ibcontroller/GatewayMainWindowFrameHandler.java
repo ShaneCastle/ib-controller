@@ -23,6 +23,7 @@ import java.awt.event.WindowEvent;
 import javax.swing.JFrame;
 
 class GatewayMainWindowFrameHandler  implements WindowHandler {
+    @Override
     public boolean filterEvent(Window window, int eventId) {
         switch (eventId) {
             case WindowEvent.WINDOW_OPENED:
@@ -32,18 +33,16 @@ class GatewayMainWindowFrameHandler  implements WindowHandler {
         }
     }
 
+    @Override
     public void handleWindow(Window window, int eventID) {
-        TwsListener.setMainWindow((JFrame) window);
-        if (Settings.getBoolean("MinimizeMainWindow", false)) {
-            TwsListener.getMainWindow().setExtendedState(java.awt.Frame.ICONIFIED);
-        }
+        MainWindowManager.mainWindowManager().setMainWindow((JFrame) window);
     }
 
+    @Override
     public boolean recogniseWindow(Window window) {
         if (! (window instanceof JFrame)) return false;
 
-        return (Utils.titleContains(window, "Interactive Brokers Gateway") ||
-                Utils.titleContains(window, "IB Gateway"));
+        return SwingUtils.findMenuItemInAnyMenuBar(window, new String [] {"Help", "About IB Gateway"}) != null;
     }
 
 }

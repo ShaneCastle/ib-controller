@@ -23,22 +23,33 @@ import java.awt.event.WindowEvent;
 import javax.swing.JDialog;
 
 class GlobalConfigurationDialogHandler implements WindowHandler {
+    @Override
     public boolean filterEvent(Window window, int eventId) {
         switch (eventId) {
             case WindowEvent.WINDOW_OPENED:
+                return true;
+            case WindowEvent.WINDOW_CLOSED:
                 return true;
             default:
                 return false;
         }
     }
 
-    public void handleWindow(Window window, int eventID) {
-        TwsListener.setConfigDialog((JDialog) window);
+    @Override
+    public void handleWindow(final Window window, int eventId) {
+        switch (eventId) {
+            case WindowEvent.WINDOW_OPENED:
+                ConfigDialogManager.configDialogManager().setConfigDialog((JDialog) window);
+                break;
+            case WindowEvent.WINDOW_CLOSED:
+                ConfigDialogManager.configDialogManager().clearConfigDialog();
+        }
     }
 
+    @Override
     public boolean recogniseWindow(Window window) {
         if (! (window instanceof JDialog)) return false;
 
-        return (Utils.titleContains(window, "Trader Workstation Configuration"));
+        return (SwingUtils.titleContains(window, "Configuration"));
     }
 }

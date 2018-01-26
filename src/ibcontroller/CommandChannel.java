@@ -28,8 +28,8 @@ import java.net.SocketException;
 
 final class CommandChannel {
 
-    private static final String _Prompt = Settings.getString("CommandPrompt", "");
-    private static final boolean _SuppressInfo = Settings.getBoolean("SuppressInfoMessages", true);
+    private static final String _Prompt = Settings.settings().getString("CommandPrompt", "");
+    private static final boolean _SuppressInfo = Settings.settings().getBoolean("SuppressInfoMessages", true);
 
     private Socket mSocket;
     private BufferedReader mInstream = null;
@@ -104,9 +104,14 @@ final class CommandChannel {
     }
 
     private void reply(String message) {
+        reply(message, false);
+    }
+
+    private void reply(String message, boolean addNewline) {
         if (mOutstream == null) return;
         try {
             mOutstream.write(message);
+            if (addNewline) mOutstream.newLine();
             mOutstream.flush();
         } catch (SocketException e) {
             // the socket was reset by the client
@@ -116,7 +121,7 @@ final class CommandChannel {
     }
 
     private void replyLine(String message) {
-        reply(message + "\r\n");
+        reply(message,true);
     }
 
     private boolean setupStreams() {

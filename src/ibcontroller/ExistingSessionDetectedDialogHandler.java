@@ -19,9 +19,7 @@
 package ibcontroller;
 
 import java.awt.Window;
-import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
-import javax.swing.JButton;
 import javax.swing.JDialog;
 
 public class ExistingSessionDetectedDialogHandler implements WindowHandler {
@@ -35,30 +33,30 @@ public class ExistingSessionDetectedDialogHandler implements WindowHandler {
     }
 
     public void handleWindow(Window window, int eventID) {
-        String setting = Settings.getString("ExistingSessionDetectedAction", "manual");
+        String setting = Settings.settings().getString("ExistingSessionDetectedAction", "manual");
         if (setting.equalsIgnoreCase("primary")) {
             Utils.logToConsole("End the other session and continue this one");
-            if (!Utils.clickButton(window, "OK") && 
-                    !Utils.clickButton(window, "Continue Login") &&
-                    !Utils.clickButton(window, "Reconnect This Session"))  {
-                Utils.err.println("IBController: could not handle 'Existing session detected' dialog because the 'OK' or 'Continue Login' or 'Reconnect This Session' button wasn't found.");
+            if (!SwingUtils.clickButton(window, "OK") && 
+                    !SwingUtils.clickButton(window, "Continue Login") &&
+                    !SwingUtils.clickButton(window, "Reconnect This Session"))  {
+                Utils.logError("could not handle 'Existing session detected' dialog because the 'OK' or 'Continue Login' or 'Reconnect This Session' button wasn't found.");
             }
         } else if (setting.equalsIgnoreCase("secondary")) {
             Utils.logToConsole("End this session and let the other session proceed");
-            if (!Utils.clickButton(window, "Cancel") && !Utils.clickButton(window, "Exit Application")) {
-                Utils.err.println("IBController: could not handle 'Existing session detected' dialog because the 'Cancel' or 'Exit Application' button wasn't found.");
+            if (!SwingUtils.clickButton(window, "Cancel") && !SwingUtils.clickButton(window, "Exit Application")) {
+                Utils.logError("could not handle 'Existing session detected' dialog because the 'Cancel' or 'Exit Application' button wasn't found.");
             }
         } else if (setting.equalsIgnoreCase("manual")) {
-            Utils.logToConsole("User must choose");
+            Utils.logToConsole("User must choose whether to continue with this session");
             // nothing to do
         } else {
-            Utils.err.println("IBController: could not handle 'Existing session detected' dialog because the ExistingSessionDetectedAction setting is invalid.");
+            Utils.logError("could not handle 'Existing session detected' dialog because the ExistingSessionDetectedAction setting is invalid.");
         }
     }
 
     public boolean recogniseWindow(Window window) {
         if (! (window instanceof JDialog)) return false;
 
-        return (Utils.titleContains(window, "Existing session detected"));
+        return (SwingUtils.titleContains(window, "Existing session detected"));
     }
 }

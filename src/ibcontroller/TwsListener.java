@@ -25,35 +25,40 @@ import java.awt.event.WindowEvent;
 import java.util.List;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
-import javax.swing.JMenuItem;
 
 class TwsListener
         implements AWTEventListener {
 
-    private static final TwsListener _OnlyInstance = new TwsListener();
-    private static volatile String _IBAPIUserName;
-    private static volatile String _IBAPIPassword;
-    private static volatile String _FIXUserName;
-    private static volatile String _FIXPassword;
+    private final List<WindowHandler> windowHandlers;
 
-    private static List<WindowHandler> _WindowHandlers;
+    private final String logComponents;
 
-    private static volatile JFrame _LoginFrame = null;
-    private static volatile JFrame _MainWindow = null;
-    private static volatile JDialog _ConfigDialog = null;
+    TwsListener (List<WindowHandler> windowHandlers) {
+        this.windowHandlers = windowHandlers;
 
-    private TwsListener() {}
-
-    static TwsListener getInstance() {return _OnlyInstance; }
-
-    static void initialise(String IBAPIUserName, String IBAPIPassword, String FIXUserName, String FIXPassword, List<WindowHandler> windowHandlers) {
-        _IBAPIUserName = IBAPIUserName;
-        _IBAPIPassword = IBAPIPassword;
-        _FIXUserName = FIXUserName;
-        _FIXPassword = FIXPassword;
-        _WindowHandlers = windowHandlers;
+        String logComponentsSetting =  Settings.settings().getString("LogComponents", "never").toLowerCase();
+        switch (logComponentsSetting) {
+            case "activate":
+            case "open":
+            case "never":
+                logComponents = logComponentsSetting;
+                break;
+            case "yes":
+            case "true":
+                logComponents="open";
+                break;
+            case "no":
+            case "false":
+                logComponents="never";
+                break;
+            default:
+                logComponents="never";
+                Utils.logError("the LogComponents setting is invalid.");
+                break;
+        }
     }
 
+    @Override
     public void eventDispatched(AWTEvent event) {
         int eventID = event.getID();
 
@@ -66,8 +71,8 @@ class TwsListener
             logWindow(window, eventID);
         }
 
-        for (WindowHandler wh : _WindowHandlers) {
-            if (wh.recogniseWindow(window) && wh.filterEvent(window, eventID))  {
+        for (WindowHandler wh : windowHandlers) {
+            if (wh.filterEvent(window, eventID) && wh.recogniseWindow(window))  {
                 wh.handleWindow(window, eventID);
                 break;
             }
@@ -75,36 +80,8 @@ class TwsListener
 
     }
 
-    static JDialog getConfigDialog() {
-        return _ConfigDialog;
-    }
-
-    static String getFIXPassword() {
-        return _FIXPassword;
-    }
-
-    static String getFIXUserName() {
-        return _FIXUserName;
-    }
-
-    static JFrame getLoginFrame() {
-        return _LoginFrame;
-    }
-
-    static JFrame getMainWindow() {
-        return _MainWindow;
-    }
-
-    static String getIBAPIPassword() {
-        return _IBAPIPassword;
-    }
-
-    static String getIBAPIUserName() {
-        return _IBAPIUserName;
-    }
-
-    private static void logWindow(Window window,int eventID) {
-        String event = windowEventToString(eventID);
+    private void logWindow(Window window, int eventID) {
+        String event = SwingUtils.windowEventToString(eventID);
 
         if (window instanceof JFrame) {
             Utils.logToConsole("detected frame entitled: " + ((JFrame) window).getTitle() + "; event=" + event);
@@ -113,57 +90,16 @@ class TwsListener
         } else {
             Utils.logToConsole("detected window: type=" + window.getClass().getName() + "; event=" + event);
         }
-        if (eventID == WindowEvent.WINDOW_OPENED && Settings.getBoolean("LogComponents", false)) Utils.logWindowComponents(window);
-    }
-
-    static void setConfigDialog(JDialog window) {
-        _ConfigDialog = window;
-    }
-    
-    static void setLoginFrame(JFrame window) {
-        _LoginFrame = window;
-    }
-
-    static void setMainWindow(JFrame window) {
-        Utils.logToConsole("Found TWS main window");
-        _MainWindow = window;
-    }
-    
-    static void showTradesLogWindow() {
-        final JMenuItem jmi = Utils.findMenuItem(_MainWindow, new String[] {"Account", "Trade Log"});
-        if (jmi != null) {
-                Utils.logToConsole("Showing trades log window");
-                jmi.doClick();
-        } else {
-            Utils.err.println("IBControllerServer: could not find Account > Trade Log menu");
+        
+        if ((eventID == WindowEvent.WINDOW_OPENED && (logComponents.equals("open") || logComponents.equals("activate")))
+            ||
+            (eventID == WindowEvent.WINDOW_ACTIVATED && logComponents.equals("activate")))
+        {
+            Utils.logRawToConsole(SwingUtils.getWindowStructure(window));
         }
     }
-
-    static String windowEventToString(int eventID) {
-        switch (eventID) { 
-            case WindowEvent.WINDOW_ACTIVATED:
-                return "Activated";
-            case WindowEvent.WINDOW_CLOSED:
-                return "Closed";
-            case WindowEvent.WINDOW_CLOSING:
-                return "Closing";
-            case WindowEvent.WINDOW_DEACTIVATED:
-                return "Deactivated";
-            case WindowEvent.WINDOW_DEICONIFIED:
-                return "Deiconfied";
-            case WindowEvent.WINDOW_GAINED_FOCUS:
-                return "Focused";
-            case WindowEvent.WINDOW_ICONIFIED:
-                return "Iconified";
-            case WindowEvent.WINDOW_LOST_FOCUS:
-                return "Lost focus";
-            case WindowEvent.WINDOW_OPENED:
-                return "Opened";
-            case WindowEvent.WINDOW_STATE_CHANGED:
-                return "State changed";
-            default:
-                return "???";
-        }
-    }
-
+    
 }
+
+
+

@@ -23,6 +23,7 @@ import java.awt.event.WindowEvent;
 import javax.swing.JFrame;
 
 class MainWindowFrameHandler implements WindowHandler {
+    @Override
     public boolean filterEvent(Window window, int eventId) {
         switch (eventId) {
             case WindowEvent.WINDOW_OPENED:
@@ -32,25 +33,18 @@ class MainWindowFrameHandler implements WindowHandler {
         }
     }
 
+    @Override
     public void handleWindow(Window window, int eventID) {
         if (eventID != WindowEvent.WINDOW_OPENED) return;
-
-        TwsListener.setMainWindow((JFrame) window);
-        if (Settings.getBoolean("MinimizeMainWindow", false)) {
-            TwsListener.getMainWindow().setExtendedState(java.awt.Frame.ICONIFIED);
-        }
-        if (Settings.getBoolean("ShowAllTrades", false)) {
-            TwsListener.showTradesLogWindow();
-        }
+        
+        MainWindowManager.mainWindowManager().setMainWindow((JFrame) window);
     }
 
+    @Override
     public boolean recogniseWindow(Window window) {
         if (! (window instanceof JFrame)) return false;
 
-        return (Utils.titleContains(window, "Interactive Brokers Trader Workstation") ||
-                Utils.titleContains(window, "IB Trader Workstation") ||
-                Utils.titleContains(window, "IB Gateway") ||
-                (Utils.findMenuItem(window, new String [] {"Help", "About Trader Workstation..."}) != null));
+        return SwingUtils.findMenuItemInAnyMenuBar(window, new String [] {"Help", "About Trader Workstation..."}) != null;
     }
 }
 

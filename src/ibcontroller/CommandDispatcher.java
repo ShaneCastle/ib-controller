@@ -19,20 +19,18 @@
 package ibcontroller;
 
 import java.awt.event.KeyEvent;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import javax.swing.JFrame;
 
 class CommandDispatcher
         implements Runnable {
 
-    private CommandChannel mChannel;
-    private boolean mGateway;
+    private final CommandChannel mChannel;
+    private final boolean isGateway;
 
-    CommandDispatcher(CommandChannel channel, boolean gateway) {
+    CommandDispatcher(CommandChannel channel, boolean isGateway) {
         this.mChannel = channel;
-        this.mGateway = gateway;
+        this.isGateway = isGateway;
     }
 
     @Override public void run() {
@@ -60,33 +58,21 @@ class CommandDispatcher
 
     private void handleInvalidCommand(String cmd) {
         mChannel.writeNack("Command invalid");
-        Utils.err.println("IBControllerServer: invalid command received: " + cmd);
+        Utils.logError("IBControllerServer: invalid command received: " + cmd);
     }
 
     private void handleEnableAPICommand() {
-        if (mGateway) {
+        if (isGateway) {
             mChannel.writeNack("ENABLEAPI is not valid for the IB Gateway");
             return;
         }
-
-        Future<?> f = (Executors.newSingleThreadExecutor()).submit(new ConfigureApiTask(mChannel));
-
-        // wait for the task to complete
-        try{
-            f.get();
-        } catch (InterruptedException ie) {
-        } catch (ExecutionException ee) {
-            ee.printStackTrace();
-        }
+        
+        // run on the current thread
+        (new ConfigurationTask(new EnableApiTask(mChannel))).execute();
    }
 
     private void handleReconnectDataCommand() {
-        JFrame jf = TwsListener.getMainWindow();
-        if (jf == null) {
-            Utils.logToConsole("main window not yet found");
-            mChannel.writeNack("main window not yet found");
-            return;
-        }
+        JFrame jf = MainWindowManager.mainWindowManager().getMainWindow(1, TimeUnit.MILLISECONDS);
 
         int modifiers = KeyEvent.CTRL_DOWN_MASK | KeyEvent.ALT_DOWN_MASK;
         KeyEvent pressed=new KeyEvent(jf,  KeyEvent.KEY_PRESSED, System.currentTimeMillis(), modifiers, KeyEvent.VK_F, KeyEvent.CHAR_UNDEFINED);
@@ -100,12 +86,7 @@ class CommandDispatcher
    }
 
     private void handleReconnectAccountCommand() {
-        JFrame jf = TwsListener.getMainWindow();
-        if (jf == null) {
-            Utils.logToConsole("main window not yet found");
-            mChannel.writeNack("main window not yet found");
-            return;
-        }
+        JFrame jf = MainWindowManager.mainWindowManager().getMainWindow();
 
         int modifiers = KeyEvent.CTRL_DOWN_MASK | KeyEvent.ALT_DOWN_MASK;
         KeyEvent pressed=new KeyEvent(jf,  KeyEvent.KEY_PRESSED, System.currentTimeMillis(), modifiers, KeyEvent.VK_R, KeyEvent.CHAR_UNDEFINED);
@@ -119,7 +100,7 @@ class CommandDispatcher
     }
 
     private void handleStopCommand() {
-        GuiExecutor.instance().execute(new StopTask(mGateway, mChannel));
+        (new StopTask(mChannel)).run();     // run on the current thread
     }
-
+    
 }

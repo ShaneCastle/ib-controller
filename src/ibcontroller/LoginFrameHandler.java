@@ -19,91 +19,56 @@
 package ibcontroller;
 
 import java.awt.Window;
-import java.awt.event.WindowEvent;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.JFrame;
 
-class LoginFrameHandler implements WindowHandler {
-    public boolean filterEvent(Window window, int eventId) {
-        switch (eventId) {
-            case WindowEvent.WINDOW_OPENED:
-                return true;
-            default:
-                return false;
-        }
-    }
+final class LoginFrameHandler extends AbstractLoginHandler {
 
-    public void handleWindow(Window window, int eventID) {
-        if (eventID != WindowEvent.WINDOW_OPENED) return;
-        TwsListener.setLoginFrame((JFrame) window);
-
-        if (! setFieldsAndClick(window)) {
-            Utils.err.println("IBController: could not login because we could not find one of the controls.");
-        }
-    }
-
+    @Override
     public boolean recogniseWindow(Window window) {
         if (! (window instanceof JFrame)) return false;
 
-        return (Utils.titleEquals(window, "New Login") ||
-                Utils.titleEquals(window, "Login"));
+        // we check for the presence of the Login button because 
+        // TWS displays a different (information-only) dialog, also 
+        // entitled Login, when it's trying to reconnect
+        return ((SwingUtils.titleEquals(window, "New Login") ||
+                SwingUtils.titleEquals(window, "Login")) &&
+                SwingUtils.findButton(window, "Login") != null);
     }
 
-    private boolean setFieldsAndClick(final Window window) {
-        if (! Utils.setTextField(window, 0, TwsListener.getIBAPIUserName())) return false;
-        if (! Utils.setTextField(window, 1, TwsListener.getIBAPIPassword())) return false;
-        if (! Utils.setCheckBoxSelected(window,
-                                            "Use/store settings on server",
-                                            Settings.getBoolean("StoreSettingsOnServer", false))) return false;
+    @Override
+    protected final boolean initialise(final Window window, int eventID) throws IBControllerException {
+        setTradingModeCombo(window);
 
-        if (TwsListener.getIBAPIUserName().length() == 0) {
-            Utils.findTextField(window, 0).requestFocus();
-            return true;
+        JtsIniManager.reload();     // because TWS/Gateway modify the jts.ini file before this point
+        String s3Store = JtsIniManager.getSetting(JtsIniManager.LogonSectionHeader, JtsIniManager.S3storeSetting);
+        if (s3Store.compareToIgnoreCase("true") == 0 && Settings.settings().getString("StoreSettingsOnServer", "").length() != 0) {
+            final String STORE_SETTINGS_ON_SERVER_CHECKBOX = "Use/store settings on server";
+            if (! SwingUtils.setCheckBoxSelected(
+                    window,
+                    STORE_SETTINGS_ON_SERVER_CHECKBOX,
+                    Settings.settings().getBoolean("StoreSettingsOnServer", false))) throw new IBControllerException(STORE_SETTINGS_ON_SERVER_CHECKBOX);
         }
-        if (TwsListener.getIBAPIPassword().length() == 0) {
-            Utils.findTextField(window, 1).requestFocus();
-            return true;
-        }
-
-        if (Utils.findButton(window, "Login") == null) return false;
-
-        /* Starting with TWS 903, when the username and password fields are filled in
-         * programmatically, the Login button is not enabled (though it is if these
-         * fields are filled in manually).
-         * 
-         * Moreover, once we've enabled the login button by calling setEnabled,
-         * clicking it immediately does not always work: for some reason a short delay
-         * is needed (but calling Thread.sleep() on the current thread doesn't work).
-         * 
-         * So we create a timer task to enable the button and click it after a short delay.
-         */
-
-        final Timer timer = new Timer(true);
-        timer.schedule(new TimerTask() {
-            public void run() {
-                final AtomicBoolean done = new AtomicBoolean(false);
-
-                /* we keep clicking the login button periodically until it
-                 * becomes disabled, as this seems to be a good indicator
-                 * that the login has actually taken effect
-                 */
-                do {
-                    GuiSynchronousExecutor.instance().execute(new Runnable() {
-                        public void run() {
-                            Utils.clickButton(window, "Login");
-                            done.set(! Utils.isButtonEnabled(window, "Login"));
-                        }
-                    });
-                    Utils.pause(500);
-                }
-                while (! done.get());
-            }
-        }, 10);
-
         return true;
     }
+    
+    @Override
+    protected final boolean preLogin(final Window window, int eventID) throws IBControllerException {
+        if (LoginManager.loginManager().IBAPIUserName().length() == 0) {
+            setMissingCredential(window, 0);
+        } else if (LoginManager.loginManager().IBAPIPassword().length() == 0) {
+            setMissingCredential(window, 1);
+        } else {
+            return true;
+        }
+        return false;
+    }
+    
+    @Override
+    protected final boolean setFields(Window window, int eventID) throws IBControllerException {
+        setCredential(window, "IBAPI user name", 0, LoginManager.loginManager().IBAPIUserName());
+        setCredential(window, "IBAPI password", 1, LoginManager.loginManager().IBAPIPassword());
+        return true;
+    }
+    
 }
 

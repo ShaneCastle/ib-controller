@@ -18,22 +18,22 @@
 
 package ibcontroller;
 
+import java.awt.Toolkit;
+import java.awt.event.WindowEvent;
 import javax.swing.JFrame;
-import javax.swing.JMenuItem;
 
 class StopTask
         implements Runnable {
 
-    private static SwitchLock _Running = new SwitchLock();
+    private static final SwitchLock _Running = new SwitchLock();
 
-    private final boolean mGateway;
     private final CommandChannel mChannel;
 
-    public StopTask(boolean gateway, final CommandChannel channel) {
-        this.mGateway = gateway;
+    public StopTask(final CommandChannel channel) {
         mChannel = channel;
     }
 
+    @Override
     public void run() {
         if (! _Running.set()) {
             writeNack("STOP already in progress");
@@ -41,32 +41,28 @@ class StopTask
         }
 
         try {
+            MyCachedThreadPool.getInstance().shutdownNow();
+            MyScheduledExecutorService.getInstance().shutdownNow();
+            
             writeInfo("Closing IBController");
-            stop((mGateway) ? "Close" : "Exit");
+            stop();
         } catch (Exception ex) {
             writeNack(ex.getMessage());
-        } finally {
-            _Running.clear();
         }
     }
+    
+    public final static boolean shutdownInProgress()
+    {
+        return _Running.query();
+    }
 
-    private void stop(String stopCommand) {
-        JFrame jf = TwsListener.getMainWindow();
-        if (jf == null) {
-            Utils.logToConsole("main window not yet found");
-            writeNack("main window not yet found");
-            return;
-        }
+    private void stop() {
+        JFrame jf = MainWindowManager.mainWindowManager().getMainWindow();
+        
+        WindowEvent wev = new WindowEvent(jf, WindowEvent.WINDOW_CLOSING);
+        Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(wev);
 
-        JMenuItem jmi = Utils.findMenuItem(jf, new String [] {"File", stopCommand});
-        if (jmi == null) {
-            Utils.err.println("IBController: Could not find File > " + stopCommand + " menu.");
-            writeNack("File > " + stopCommand + " menu not found");
-            return;
-        }
-
-        writeAck("");
-        jmi.doClick();
+        writeAck("Shutting down");
     }
 
     private void writeAck(String message) {if (! (mChannel == null)) mChannel.writeAck(message);}

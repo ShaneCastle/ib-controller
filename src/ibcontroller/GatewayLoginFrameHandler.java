@@ -19,131 +19,104 @@
 package ibcontroller;
 
 import java.awt.Window;
-import java.awt.event.WindowEvent;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.JFrame;
 import javax.swing.JRadioButton;
 
-class GatewayLoginFrameHandler  implements WindowHandler {
+final class GatewayLoginFrameHandler extends AbstractLoginHandler {
+    
+    @Override
+    public boolean recogniseWindow(Window window) {
+        if (! (window instanceof JFrame)) return false;
 
-    public boolean filterEvent(Window window, int eventId) {
-        switch (eventId) {
-            case WindowEvent.WINDOW_OPENED:
-                return true;
-            default:
-                return false;
-        }
+        return (SwingUtils.titleContains(window, "IB Gateway") &&
+               (SwingUtils.findButton(window, "Login") != null));
     }
 
-    public void handleWindow(final Window window, int eventID) {
-        try {
-            selectGatewayMode(window);
-            if (setFields(window)) doLogin(window);
-        } catch (ComponentNotFoundException e) {
-            Utils.err.println("IBController: could not login: could not find control: " + e.getMessage());
-        }
+    @Override
+    protected final boolean initialise(final Window window, int eventID) throws IBControllerException {
+        selectGatewayMode(window);
+        setTradingModeCombo(window);
+        return true;
     }
     
-    private void selectGatewayMode(Window window) throws ComponentNotFoundException {
-        if (Settings.getBoolean("FIX", false)) {
+    @Override
+    protected final boolean preLogin(final Window window, int eventID) throws IBControllerException {
+        boolean result;
+        if (Settings.settings().getBoolean("FIX", false)) {
+            result = setMissingFIXCredentials(window);
+        } else {
+            result =setMissingIBAPICredentials(window);
+        }
+        return result;
+    }
+    
+    private boolean setMissingFIXCredentials(Window window) {
+        boolean result = false;
+        if (LoginManager.loginManager().FIXUserName().length() == 0) {
+            setMissingCredential(window, 0);
+        } else if (LoginManager.loginManager().FIXPassword().length() == 0) {
+            setMissingCredential(window, 1);
+        } else if (LoginManager.loginManager().IBAPIUserName().length() != 0 || LoginManager.loginManager().IBAPIPassword().length() != 0) {
+            if (LoginManager.loginManager().IBAPIUserName().length() == 0) {
+                setMissingCredential(window, 3);
+            } else if (LoginManager.loginManager().IBAPIPassword().length() == 0) {
+                setMissingCredential(window, 4);
+            } else {
+                result = true;
+            }
+        } else {
+            result = true;
+        }
+        return result;
+    }
+
+    private boolean setMissingIBAPICredentials(Window window) {
+        boolean result = false;
+        if (LoginManager.loginManager().IBAPIUserName().length() == 0) {
+            setMissingCredential(window, 0);
+        } else if (LoginManager.loginManager().IBAPIPassword().length() == 0) {
+            setMissingCredential(window, 1);
+        } else {
+            result = true;
+        }
+        return result;
+    }
+
+    @Override
+    protected final boolean setFields(Window window, int eventID) throws IBControllerException {
+        if (Settings.settings().getBoolean("FIX", false)) {
+            setCredential(window, "FIX user name", 0, LoginManager.loginManager().FIXUserName());
+            setCredential(window, "FIX password", 1, LoginManager.loginManager().FIXPassword());
+            setCredential(window, "IBAPI user name", 3, LoginManager.loginManager().IBAPIUserName());
+            setCredential(window, "IBAPI password", 4, LoginManager.loginManager().IBAPIPassword());
+        } else {
+            setCredential(window, "IBAPI user name", 0, LoginManager.loginManager().IBAPIUserName());
+            setCredential(window, "IBAPI password", 1, LoginManager.loginManager().IBAPIPassword());
+        }
+        return true;
+    }
+    
+    private void selectGatewayMode(Window window) throws IBControllerException {
+        if (Settings.settings().getBoolean("FIX", false)) {
             switchToFIX(window);
         } else {
             switchToIBAPI(window);
         }
     }
     
-    private void switchToFIX(Window window) throws ComponentNotFoundException {
-        JRadioButton button = Utils.findRadioButton(window, "FIX CTCI");
-        if (button == null) throw new ComponentNotFoundException("FIX CTCI radio button");
+    private void switchToFIX(Window window) throws IBControllerException {
+        JRadioButton button = SwingUtils.findRadioButton(window, "FIX CTCI");
+        if (button == null) throw new IBControllerException("FIX CTCI radio button");
         
         if (! button.isSelected()) button.doClick();
     }
     
-    private void switchToIBAPI(Window window) throws ComponentNotFoundException {
-        JRadioButton button = Utils.findRadioButton(window, "IB API");
-        if (button == null) button = Utils.findRadioButton(window, "TWS/API") ;
-        if (button == null) throw new ComponentNotFoundException("IB API radio button");
+    private void switchToIBAPI(Window window) throws IBControllerException {
+        JRadioButton button = SwingUtils.findRadioButton(window, "IB API");
+        if (button == null) button = SwingUtils.findRadioButton(window, "TWS/API") ;
+        if (button == null) throw new IBControllerException("IB API radio button");
         
         if (! button.isSelected()) button.doClick();
-    }
-        
-    public boolean recogniseWindow(Window window) {
-        if (! (window instanceof JFrame)) return false;
-
-        return (Utils.titleContains(window, "IB Gateway") &&
-               (Utils.findButton(window, "Login") != null));
-    }
-
-    private boolean setFields(final Window window) throws ComponentNotFoundException {
-        boolean isFIXMode = Settings.getBoolean("FIX", false);
-        
-        if (isFIXMode) {
-            if (! Utils.setTextField(window, 0, TwsListener.getFIXUserName())) throw new ComponentNotFoundException("FIX user name");
-            if (! Utils.setTextField(window, 1, TwsListener.getFIXPassword())) throw new ComponentNotFoundException("FIX password");
-            if (! Utils.setTextField(window, 3, TwsListener.getIBAPIUserName())) throw new ComponentNotFoundException("IBAPI user name");
-            if (! Utils.setTextField(window, 4, TwsListener.getIBAPIPassword())) throw new ComponentNotFoundException("IBAPI password");
-        } else {
-            if (! Utils.setTextField(window, 0, TwsListener.getIBAPIUserName())) throw new ComponentNotFoundException("IBAPI user name");
-            if (! Utils.setTextField(window, 1, TwsListener.getIBAPIPassword()))  throw new ComponentNotFoundException("IBAPI password");
-        }
-            
-        if (isFIXMode) {
-            if (TwsListener.getFIXUserName().length() == 0) {
-                Utils.findTextField(window, 0).requestFocus();
-                return false;
-            }
-            if (TwsListener.getFIXPassword().length() == 0) {
-                Utils.findTextField(window, 1).requestFocus();
-                return false;
-            }
-            if (TwsListener.getIBAPIUserName().length() != 0) {
-                if (TwsListener.getIBAPIPassword().length() == 0) {
-                    Utils.findTextField(window, 4).requestFocus();
-                    return false;
-                }
-            }
-        } else {
-            if (TwsListener.getIBAPIUserName().length() == 0) {
-                Utils.findTextField(window, 0).requestFocus();
-                return false;
-            }
-            if (TwsListener.getIBAPIPassword().length() == 0) {
-                Utils.findTextField(window, 1).requestFocus();
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private void doLogin(final Window window) throws ComponentNotFoundException {
-
-        if (Utils.findButton(window, "Login") == null) throw new ComponentNotFoundException("Login button");
-
-        final Timer timer = new Timer(true);
-        timer.schedule(new TimerTask() {
-            public void run() {
-                final AtomicBoolean done = new AtomicBoolean(false);
-
-                /* we keep clicking the login button periodically until 
-                 * the window becomes invisible, as this seems to be a 
-                 * good indicator that the login has actually taken effect
-                 */
-
-                do {
-                    GuiSynchronousExecutor.instance().execute(new Runnable() {
-                        public void run() {
-                            Utils.clickButton(window, "Login");
-                            done.set(! window.isVisible());
-                        }
-                    });
-                    Utils.pause(500);
-                }
-                while (!done.get());
-            }
-        }, 10);
     }
 
 }

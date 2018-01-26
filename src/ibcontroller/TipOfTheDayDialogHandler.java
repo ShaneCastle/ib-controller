@@ -34,14 +34,14 @@ class TipOfTheDayDialogHandler implements WindowHandler {
     }
 
     public void handleWindow(Window window, int eventID) {
-        if (! Utils.clickButton(window, "Close")) {
-            Utils.err.println("IBController: could not dismiss Tip of the Day because we could not find one of the controls.");
+        if (! SwingUtils.clickButton(window, "Close")) {
+            Utils.logError("could not dismiss Tip of the Day because we could not find one of the controls.");
         }
     }
 
     public boolean recogniseWindow(Window window) {
         if (! (window instanceof JDialog)) return false;
 
-        return (Utils.titleContains(window, "Tip of the Day"));
+        return (SwingUtils.titleContains(window, "Tip of the Day"));
     }
 }

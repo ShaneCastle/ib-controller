@@ -2,16 +2,15 @@
 [latest official release](https://github.com/ib-controller/ib-controller/releases/latest)
 here**
 
-IB Controller provides hands-free operation of
+IBController provides hands-free operation of
 [Interactive Brokers](https://www.interactivebrokers.com)
 [Trader Workstation](http://www.interactivebrokers.com/en/pagemap/pagemap_APISolutions.php).
 It's especially useful for developers of automated trading systems who use
 [IB API](http://interactivebrokers.github.io). Features include:
 
-* Automates Trader Workstation (TWS) and IB Gateway (excluding the FIX mode)
+* Automates Trader Workstation (TWS) and IB Gateway (including the FIX mode)
 * Completes login dialog with credentials from an ``.ini`` file or command line
 * Handles dialog boxes which TWS presents during programmatic trading activities
-* Offers simple encryption of IB passwords if desired
 * Keeps TWS running indefinitely by handling TWS time-based exits
 * Allows TWS to be terminated at a specified time on a specified day of the week
 * Dismisses various dialog messages (eg version updates, daily tips, IB API
@@ -21,35 +20,69 @@ It's especially useful for developers of automated trading systems who use
 
 Downloads
 ---------
-* **The [latest official release ZIP](https://github.com/ib-controller/ib-controller/releases/latest)
-  is recommended for most users**
-* [Prior releases](https://github.com/ib-controller/ib-controller/releases) are
-  also available
-* Arch Linux users can install the
-  [ib-controller](https://aur.archlinux.org/packages/ib-controller/) package
-  from AUR (includes lots of server-oriented features such as multiple daemons,
-  systemd units, headless/virtual framebuffer support etc)
-* Developers may wish to embed IB Controller for integration testing convenience
-  (eg see projects
-  [GoIB](https://github.com/gofinance/ib/tree/master/testserver) and
-  [IB Connect](https://github.com/benalexau/ibconnect/tree/master/testserver))
+
+If you just want to use IBController without modifying it, you should download 
+the latest official release ZIP which you can find [here](https://github.com/ib-controller/ib-controller/releases/latest).
+
+Should you ever need to revert to an earlier IBController release, they are also available 
+[here](https://github.com/ib-controller/ib-controller/releases).
+
+A docker container with a working IBController and IBGateway combination is available from [QuantConnect] (https://github.com/QuantConnect/Lean/blob/master/DockerfileLeanFoundation).
+
+If you use Arch Linux you can install the
+[ib-controller](https://aur.archlinux.org/packages/ib-controller/) package
+from AUR: it includes lots of server-oriented features such as multiple daemons,
+systemd units, headless/virtual framebuffer support, Monit monitoring etc.
+
+Developers may wish to embed IBController for integration testing convenience
+(eg see projects
+[GoIB](https://github.com/gofinance/ib/tree/master/testserver) and
+[IB Connect](https://github.com/benalexau/ibconnect/tree/master/testserver))
 
 User Guide
 ----------
-Please see the [IB Controller User Guide](userguide.md) for installation and
-usage instructions.
+
+Please see the [IBController User Guide](userguide.md) for installation and
+usage instructions. The User Guide is also included as a PDF file in the 
+download ZIP.
 
 Support
 -------
-* **The [TWSAPI Yahoo Group](https://groups.yahoo.com/neo/groups/TWSAPI/info)
-  is encouraged for end user usage questions and support**
-* Bugs can be reported in the
-  [GitHub Issue Tracker](https://github.com/ib-controller/ib-controller/issues)
+
+> IMPORTANT
+> By far the most common problem that users have when setting up IBController
+is the result of trying to use it with the self-updating version of TWS.
+>
+>**IBController DOES NOT WORK with the self-updating version of TWS.**
+>
+>You must install the offline version of TWS for use with IBController.
+>
+>Note however that there is no self-updating version of the Gateway, so the
+normal Gateway installer will work fine if you only want to use the Gateway.
+
+If you need assistance with running IBController, or have any queries or 
+suggestions for improvement, you should join the 
+[IBController User Group](https://groups.io/g/ibcontroller).
+
+If you're convinced you've found a bug in IBController, please report it
+via either the [IBController User Group](https://groups.io/g/ibcontroller)
+or the [GitHub Issue Tracker](https://github.com/ib-controller/ib-controller/issues).
+
+Please provide as much evidence as you can, especially the versions of 
+IBController and TWS/Gateway you're using and a full description of the 
+incorrect behaviour you're seeing.
+
+Note that IBController creates a log file that records a lot of useful 
+information that can be very helpful in diagnosing users' problems. The 
+location of this log file is prominently displayed in the window that appears
+when you run IBController. It is helpful to attach this log file to any 
+problem reports.
 
 Contributing
 ------------
-We welcome your involvement and contributions! Just have a read of the
-[contributor guidelines](CONTRIBUTING.md) and send us a 
+
+We welcome your involvement and contributions! Please read the
+[contributor guidelines](CONTRIBUTING.md), and send us a 
 [pull request](../../pulls).
 
 We also thank past contributors to the original SourceForge project: Richard
@@ -58,5 +91,5 @@ King, Steven Kearns and Ken Geis. Plus of course all those on our GitHub
 
 License
 -------
-IB Controller is licensed under the
+IBController is licensed under the
 [GNU General Public License](http://www.gnu.org/licenses/gpl.html) version 3.

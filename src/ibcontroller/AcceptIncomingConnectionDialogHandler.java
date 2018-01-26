@@ -37,30 +37,30 @@ class AcceptIncomingConnectionDialogHandler implements WindowHandler {
         final String Reject = "reject";
         final String Manual = "manual";
         
-        String acceptIncomingConnectionAction = Settings.getString("AcceptIncomingConnectionAction", Accept);
+        String acceptIncomingConnectionAction = Settings.settings().getString("AcceptIncomingConnectionAction", Accept);
         
         if (acceptIncomingConnectionAction.equalsIgnoreCase(Manual)) return;
 
         if (acceptIncomingConnectionAction.equalsIgnoreCase(Accept)) {
-            if (Utils.clickButton(window, "OK")) {
-            } else if (Utils.clickButton(window, "Yes")) {
+            if (SwingUtils.clickButton(window, "OK")) {
+            } else if (SwingUtils.clickButton(window, "Yes")) {
             } else {
-                Utils.err.println("IBController: could not accept incoming connection because we could not find one of the controls.");
+                Utils.logError("could not accept incoming connection because we could not find one of the controls.");
             }
         } else if (acceptIncomingConnectionAction.equalsIgnoreCase(Reject)) {
-            if (Utils.clickButton(window, "No")) {
+            if (SwingUtils.clickButton(window, "No")) {
             } else {
-                Utils.err.println("IBController: could not accept incoming connection because we could not find one of the controls.");
+                Utils.logError("could not accept incoming connection because we could not find one of the controls.");
             }
         } else {
-                Utils.err.println("IBController: could not accept incoming connection because the AcceptIncomingConnectionAction setting is invalid.");
+                Utils.logError("could not accept incoming connection because the AcceptIncomingConnectionAction setting is invalid.");
         }
     }
 
     public boolean recogniseWindow(Window window) {
         if (! (window instanceof JDialog)) return false;
 
-        return (Utils.findLabel(window, "Accept incoming connection") != null);
+        return (SwingUtils.findLabel(window, "Accept incoming connection") != null);
     }
 }
 
